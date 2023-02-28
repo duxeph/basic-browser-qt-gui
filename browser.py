@@ -2,8 +2,7 @@ import os
 import sys
 try:
     from PyQt5.uic import loadUi
-    from PyQt5 import QtWidgets, QtCore
-    from PyQt5.QtCore import *
+    from PyQt5 import QtWidgets, QtCore, QtGui
     from PyQt5.QtWebEngineWidgets import QWebEngineView as QWebView, QWebEnginePage as QWebPage
 except ImportError as e:
     with open(os.getcwd()+"/log.txt", "w") as file:
@@ -11,7 +10,6 @@ except ImportError as e:
     try:
         from PyQt5.uic import loadUi
         from PyQt5 import QtWidgets, QtCore
-        from PyQt5.QtCore import *
         from PyQt5.QtWebEngineWidgets import QWebEngineView as QWebView, QWebEnginePage as QWebPage
     except ImportError as e:
         print("[EXCEPTION] Something has gone wrong. Please provide requirements.txt before running again.")
@@ -21,7 +19,6 @@ class window(QtWidgets.QWidget):
     def __init__(self):
         QtWidgets.QWidget.__init__(self)
         loadUi(os.getcwd()+"\\sample.ui", self)
-        self.installEventFilter(self)
     
         self.tabs = []
         self.webViews = []
@@ -31,6 +28,7 @@ class window(QtWidgets.QWidget):
         
         self.tabWidget.currentChanged.connect(self.updateUrl)
         self.webViews[self.tabWidget.currentIndex()].urlChanged.connect(self.updateUrl)
+        self.webViews[self.tabWidget.currentIndex()].loadFinished.connect(self.updateUrl)
         
         self.btBack.clicked.connect(self.back)
         self.btForward.clicked.connect(self.forward)
@@ -65,11 +63,11 @@ class window(QtWidgets.QWidget):
     def updateUrl(self):
         print(self.tabWidget.currentIndex())
 
-        name = self.webViews[self.tabWidget.currentIndex()].url().toString()
-        self.txUrl.setText(name)
-
-        if name.count(".") > 1: name = ".".join(name.split(".")[1:-1]).capitalize()
-        else: name = ".".join(name.split(".")[:-1]).capitalize()
+        url = self.webViews[self.tabWidget.currentIndex()].url().toString()
+        self.txUrl.setText(url)
+        name = self.webViews[self.tabWidget.currentIndex()].title()
+        if name=="":
+            name = "Loading..."
         self.tabWidget.setTabText(self.tabWidget.currentIndex(), name)
     
     def insertTab(self):
@@ -81,7 +79,6 @@ class window(QtWidgets.QWidget):
         
         self.arangeGeometry()
         self.btDelete.setText(str(len(self.tabs)))
-
         self.tabWidget.setCurrentIndex(len(self.tabs) - 1)
     
     def deleteTab(self):
@@ -99,13 +96,9 @@ class window(QtWidgets.QWidget):
         # print(size)
         for i in range(len(self.webViews)):
             self.webViews[i].resize(size)
-    
-    def eventFilter(self, obj, event):
-        if (event.type() == QtCore.QEvent.Resize):
-            print('[EVENT] Resizing...')
-
-            self.arangeGeometry()
-        return super().eventFilter(obj, event)
+            
+    def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
+        self.arangeGeometry()
     
 def app():
     app=QtWidgets.QApplication(sys.argv)
